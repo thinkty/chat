@@ -1,14 +1,39 @@
 import React from 'react';
+import { ChatPage } from './components/ChatPage';
+import { LoginPage } from './components/LoginPage';
+import { MainPage } from './components/MainPage';
 
-type Props = {
-  message: string;
-} & typeof defaultProps;
+export type Page = "login" | "main" | "chat";
 
-const defaultProps = {
-  message: 'Hello World!',
-};
+// export function getPage(page: Page, setPage: React.Dispatch<React.SetStateAction<Page>>): React.ReactNode {
+//   switch (page) {
+//     case "login":
+//       return <LoginPage setPage={setPage} />;
+//     case "chat":
+//       return <ChatPage />
+//     default:
+//       return <MainPage />
+//   }
+// }
 
-export const App = (props: Props): JSX.Element => {
+export const App = (): JSX.Element => {
+
+  // Check user session
+  let auth = true;
+
+  const [page, setPage] = React.useState<Page>(auth ? "main" : "login");
+
+  function getPage(page: Page, setPage: React.Dispatch<React.SetStateAction<Page>>): React.ReactNode {
+    switch (page) {
+      case "login":
+        return <LoginPage setPage={setPage} />;
+      case "chat":
+        return <ChatPage setPage={setPage} />
+      default:
+        return <MainPage setPage={setPage} />
+    }
+  }
+
   return (
     <div
       style={{
@@ -16,13 +41,15 @@ export const App = (props: Props): JSX.Element => {
         height: '100vh',
         display: 'grid',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'start',
+        backgroundColor: 'black',
+        color: 'white',
+        padding: 0,
+        margin: 0,
+        fontFamily: 'Verdana, Geneva, sans-serif',
       }}
     >
-      <h1>
-        { props.message }
-      </h1>
+      { getPage(page, setPage) }
     </div>
   );
 }
-App.defaultProps = defaultProps;
