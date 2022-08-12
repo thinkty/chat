@@ -33321,6 +33321,81 @@
 	  return /*#__PURE__*/React.createElement(React.Fragment, null, "ChatPage");
 	};
 
+	/**
+	 * JWT (or Id Token) is used for authenticating the user via the Firebase application.
+	 * The value is set by the OAuth provider.
+	 */
+	var SESSION_KEY_ID_TOKEN = 'jwt';
+	/**
+	 * Display name of the user registered to the Firebase application.
+	 */
+
+	var SESSION_KEY_USER = 'user';
+	/**
+	 * Contains information related to the current session's user
+	 */
+
+	/**
+	 * Default user just for the initialization of the user state in App
+	 */
+	var defaultUser = {
+	  idToken: null,
+	  user: null
+	};
+	/**
+	 * Parse the expiration time from the base64 encoded JSON Web Token.
+	 * The expiration information is stored in the second block of the JWT.
+	 * 
+	 * @param {string} token
+	 * @returns {number} Expiration time of the JWT
+	 */
+
+	function getTokenExpirationTime(token) {
+	  return parseInt(JSON.parse(window.atob(token.split('.')[1])).exp);
+	}
+	/**
+	 * Checks the session storage for user information and checks the JWT (idToken) to see if it has expired.
+	 * @returns {User | null} null if idToken/user does not exist or idToken has expired. Otherwise, User object.
+	 */
+
+	function getUserFromSessionStorage() {
+	  var idToken = sessionStorage.getItem(SESSION_KEY_ID_TOKEN);
+	  var user = sessionStorage.getItem(SESSION_KEY_USER);
+
+	  if (idToken == null || user == null) {
+	    return null;
+	  }
+
+	  var exp = getTokenExpirationTime(idToken);
+
+	  if (Date.now() >= exp * 1000) {
+	    logout(); // Clear session storage
+
+	    return null;
+	  }
+
+	  return {
+	    idToken: idToken,
+	    user: user
+	  };
+	}
+	function logout() {
+	  sessionStorage.removeItem(SESSION_KEY_ID_TOKEN);
+	  sessionStorage.removeItem(SESSION_KEY_USER); // TODO: in case of having multiple tabs open with the same account logged-in, when logging out, also log out from those tabs
+	  // see "What will happen if I am logged in on different tabs?" https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/
+
+	  return {
+	    idToken: null,
+	    user: null
+	  };
+	}
+
+	/**
+	 * Response from server after sending the JWT (idToken)
+	 *
+	 * @see auth.ts src/server/auth.ts
+	 */
+
 	var LoginPage = function LoginPage(_ref) {
 	  var setPage = _ref.setPage;
 
@@ -33342,8 +33417,8 @@
 	      throw new Error(response.statusText);
 	    }).then(function (data) {
 	      // Save to session-storage for accessing secured APIs
-	      sessionStorage.setItem('jwt', data.idToken);
-	      sessionStorage.setItem('user', data.user);
+	      sessionStorage.setItem(SESSION_KEY_ID_TOKEN, data.idToken);
+	      sessionStorage.setItem(SESSION_KEY_USER, data.user);
 	      setPage("main");
 	    })["catch"](function (error) {
 	      // TODO: visual alert of error
@@ -33449,30 +33524,37 @@
 	}
 
 	var MainPage = function MainPage(_ref) {
-	  var setPage = _ref.setPage;
-	  return /*#__PURE__*/React.createElement(React.Fragment, null, "MainPage", /*#__PURE__*/React.createElement("button", {
+	  var setPage = _ref.setPage,
+	      user = _ref.user;
+	  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "MainPage"), "Hi, ", user.user, /*#__PURE__*/React.createElement("button", {
 	    onClick: function onClick() {
-	      setPage("login");
+	      logout();
+	      setPage('login');
 	    }
-	  }, "Login"));
+	  }, "Logout"));
 	};
 
-	// export function getPage(page: Page, setPage: React.Dispatch<React.SetStateAction<Page>>): React.ReactNode {
-	//   switch (page) {
-	//     case "login":
-	//       return <LoginPage setPage={setPage} />;
-	//     case "chat":
-	//       return <ChatPage />
-	//     default:
-	//       return <MainPage />
-	//   }
-	// }
-	var App = function App() {
+	/**
+	 * I initially wanted to use the react-router-dom for switching between pages but it was making the server-side code
+	 * look ugly (wow. what an excuse) due to the uri not being handled. It would redirect to a 404 page if the user
+	 * refreshed the page manually since '/login' doesn't really exist. Since there are only 3 pages, I could just let those
+	 * paths redirect to index.html but I feared that it might interfere with the future implements.
+	 */
 
-	  var _React$useState = React.useState("main" ),
+	var App = function App() {
+	  // Check user validity
+	  var parsedUser = getUserFromSessionStorage();
+
+	  var _React$useState = React.useState(parsedUser != null ? "main" : "login"),
 	      _React$useState2 = _slicedToArray(_React$useState, 2),
 	      page = _React$useState2[0],
 	      setPage = _React$useState2[1];
+
+	  var _React$useState3 = React.useState(parsedUser != null ? parsedUser : defaultUser),
+	      _React$useState4 = _slicedToArray(_React$useState3, 2),
+	      user = _React$useState4[0];
+	      _React$useState4[1]; // TODO: I think page management should be done by App instead of individual components using setPage
+
 
 	  function getPage(page, setPage) {
 	    switch (page) {
@@ -33488,7 +33570,8 @@
 
 	      default:
 	        return /*#__PURE__*/React.createElement(MainPage, {
-	          setPage: setPage
+	          setPage: setPage,
+	          user: user
 	        });
 	    }
 	  }

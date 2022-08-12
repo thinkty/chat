@@ -2,6 +2,7 @@ import React from 'react';
 import { ChatPage } from './components/ChatPage';
 import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
+import { defaultUser, getUserFromSessionStorage, User } from './util';
 
 /**
  * I initially wanted to use the react-router-dom for switching between pages but it was making the server-side code
@@ -13,11 +14,13 @@ export type Page = "login" | "main" | "chat";
 
 export const App = (): JSX.Element => {
 
-  // Check user session
-  let auth = true;
+  // Check user validity
+  const parsedUser = getUserFromSessionStorage();
 
-  const [page, setPage] = React.useState<Page>(auth ? "main" : "login");
+  const [page, setPage] = React.useState<Page>(parsedUser != null ? "main" : "login");
+  const [user, setUser] = React.useState<User>(parsedUser != null ? parsedUser : defaultUser);
 
+  // TODO: I think page management should be done by App instead of individual components using setPage
   function getPage(page: Page, setPage: React.Dispatch<React.SetStateAction<Page>>): React.ReactNode {
     switch (page) {
       case "login":
@@ -25,7 +28,7 @@ export const App = (): JSX.Element => {
       case "chat":
         return <ChatPage setPage={setPage} />
       default:
-        return <MainPage setPage={setPage} />
+        return <MainPage setPage={setPage} user={user} />
     }
   }
 

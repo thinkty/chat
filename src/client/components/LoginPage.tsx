@@ -1,5 +1,6 @@
 import React from 'react';
 import { Page } from '../App';
+import { SESSION_KEY_ID_TOKEN, SESSION_KEY_USER } from '../util';
 
 /**
  * Response from server after sending the JWT (idToken)
@@ -34,8 +35,8 @@ export const LoginPage = ({
       })
       .then((data: FirebaseAuthResponse) => {
         // Save to session-storage for accessing secured APIs
-        sessionStorage.setItem('jwt', data.idToken);
-        sessionStorage.setItem('user', data.user);
+        sessionStorage.setItem(SESSION_KEY_ID_TOKEN, data.idToken);
+        sessionStorage.setItem(SESSION_KEY_USER, data.user);
 
         setPage("main");
       })
