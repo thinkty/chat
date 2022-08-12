@@ -3,18 +3,13 @@ import { ChatPage } from './components/ChatPage';
 import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
 
+/**
+ * I initially wanted to use the react-router-dom for switching between pages but it was making the server-side code
+ * look ugly (wow. what an excuse) due to the uri not being handled. It would redirect to a 404 page if the user
+ * refreshed the page manually since '/login' doesn't really exist. Since there are only 3 pages, I could just let those
+ * paths redirect to index.html but I feared that it might interfere with the future implements.
+ */
 export type Page = "login" | "main" | "chat";
-
-// export function getPage(page: Page, setPage: React.Dispatch<React.SetStateAction<Page>>): React.ReactNode {
-//   switch (page) {
-//     case "login":
-//       return <LoginPage setPage={setPage} />;
-//     case "chat":
-//       return <ChatPage />
-//     default:
-//       return <MainPage />
-//   }
-// }
 
 export const App = (): JSX.Element => {
 
