@@ -1,9 +1,13 @@
-import { User } from 'firebase/auth';
 import React from 'react';
 import { Page } from '../App';
 
+/**
+ * Response from server after sending the JWT (idToken)
+ *
+ * @see auth.ts src/server/auth.ts
+ */
 type FirebaseAuthResponse = {
-  user: User,
+  user: string,
   idToken: string,
 };
 
@@ -14,25 +18,34 @@ export const LoginPage = ({
 }): JSX.Element => {
 
   // Send the Id Token to the server to authenticate with Firebase
-  async function handleCredentialResponse(response: google.accounts.id.CredentialResponse) {
-    const idToken = response.credential;
+  function handleCredentialResponse(response: google.accounts.id.CredentialResponse) {
 
-    const result = await fetch('/api/auth', {
+    fetch('/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
+      body: JSON.stringify({ idToken: response.credential }),
+    })
+      .then((response) => {
+        if (response.ok || response.status == 200) {
+          return response.json();
+        }
+        
+        throw new Error(response.statusText);
+      })
+      .then((data: FirebaseAuthResponse) => {
+        // Save to session-storage for accessing secured APIs
+        sessionStorage.setItem('jwt', data.idToken);
+        sessionStorage.setItem('user', data.user);
 
-    if (result.ok) {
-      const data: FirebaseAuthResponse = await result.json();
-      console.log('Succesful authentication');
-      console.log(data.user);
-      console.log(data.idToken);
+        setPage("main");
+      })
+      .catch((error) => {
+        // TODO: visual alert of error
 
-      // TODO: Save user data to local storage and redirect to main page where it will read from local storage and check with the server to make sure it is a valid token
-    }
-
-    // TODO: Error handling
+        // 400 - bad request : Missing or malformed idToken
+        // 40X - Invalid JWT (idToken) or something else idk...
+        console.error(error);
+      });
   }
 
   // Load sign-in-with-google script
@@ -62,8 +75,13 @@ export const LoginPage = ({
 
 type ScriptStatus = "idle" | "loading" | "ready" | "error";
 
-// Function to load/use scripts in React
-// @see https://usehooks.com/useScript/
+/**
+ * Function to asynchronously load/ scripts in React.
+ * 
+ * @param {string} src Url of the script to load
+ * @returns {ScriptStatus} 
+ * @see https://usehooks.com/useScript/
+ */
 function useScript(src: string) {
   // Keep track of script status ("idle", "loading", "ready", "error")
   const [status, setStatus] = React.useState<ScriptStatus>("loading");
@@ -83,8 +101,7 @@ function useScript(src: string) {
   }
 
   React.useEffect(() => {
-    // Fetch existing script element by src
-    // It may have been added by another intance of this hook
+    // Fetch existing script element by src. It may have been added by another intance of this hook
     let script: HTMLScriptElement | null = document.querySelector(`script[src="${src}"]`);
 
     // Create script
@@ -97,8 +114,7 @@ function useScript(src: string) {
       // Add script to document body
       document.body.appendChild(script);
 
-      // Store status in attribute on script
-      // This can be read by other instances of this hook
+      // Store status in attribute on script. This can be read by other instances of this hook
       const setAttributeFromEvent = (event: Event) => {
         script!.setAttribute("data-status", event.type === "load" ? "ready" : "error");
       };
@@ -106,29 +122,27 @@ function useScript(src: string) {
       script.addEventListener("load", setAttributeFromEvent);
       script.addEventListener("error", setAttributeFromEvent);
     } else {
+
       // Grab existing script status from attribute and set to state.
       setStatus(stos(script.getAttribute("data-status")!));
     }
 
-      // Script event handler to update status in state
-      // Note: Even if the script already exists we still need to add
-      // event handlers to update the state for *this* hook instance.
-      const setStateFromEvent = (event: Event) => {
-        setStatus(event.type === "load" ? "ready" : "error");
-      };
+    // Script event handler to update status in state
+    // Note: Even if the script already exists we still need to add event handlers to update the state for *this* hook instance.
+    const setStateFromEvent = (event: Event) => {
+      setStatus(event.type === "load" ? "ready" : "error");
+    };
 
-      // Add event listeners
-      script.addEventListener("load", setStateFromEvent);
-      script.addEventListener("error", setStateFromEvent);
+    script.addEventListener("load", setStateFromEvent);
+    script.addEventListener("error", setStateFromEvent);
 
-      // Remove event listeners on cleanup
-      return () => {
-        if (script) {
-          script.removeEventListener("load", setStateFromEvent);
-          script.removeEventListener("error", setStateFromEvent);
-        }
-      };
-    },
+    // Remove event listeners on cleanup
+    return () => {
+      if (script) {
+        script.removeEventListener("load", setStateFromEvent);
+        script.removeEventListener("error", setStateFromEvent);
+      }
+    }},
     [src] // Only re-run effect if script src changes
   );
 

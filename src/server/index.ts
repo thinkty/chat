@@ -23,7 +23,7 @@ const app = express();
 app.use(helmet.crossOriginOpenerPolicy({ policy: 'same-origin-allow-popups' })); // For google sign in popups
 app.use(express.json());
 app.use(express.urlencoded( {extended : false } ));
-app.use('/api', authRouter);
+app.use(authRouter);
 app.use(express.static('public'));
 
 // app.get('*bundle.js', (req, res) => {
@@ -38,7 +38,7 @@ app.use(express.static('public'));
 //   res.sendFile('index.html', { root: path.join(__dirname, '../../public') });
 // });
 
-
+// TODO: check jwt (or idToken for Google) before doing any operation
 app.get('/api', (req, res) => {
   res.send('hello world');
 });
