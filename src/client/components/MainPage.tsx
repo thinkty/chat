@@ -15,6 +15,7 @@ export const MainPage = ({
     );
   }
 
+  // TODO: update UI
   return (
     <>
       Hi, { auth.user.name }

@@ -5,7 +5,9 @@ import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
 
 /**
- * TODO:
+ * By using the MemoryRouter instead of the normal BrowserRouter, the URL of the
+ * browser is not manipulated, thus, even if the user refreshes the page, it
+ * will work.
  * 
  * @see https://reactrouter.com/docs/en/v6/routers/memory-router
  * @see https://reactrouter.com/docs/en/v6/examples/auth
@@ -20,7 +22,20 @@ export const App = (): JSX.Element => {
             <Route path='/' element={<MainPage />} />
             <Route path='/login' element={<LoginPage />} />
 
-            {/* TODO: What will happen when I navigate to an api endpoint? */}
+            {/*
+            
+            When navigating to a non-existent page via the react-router-dom API,
+            it will be caught by the Route element below and be redirected.
+
+            When navigating to a page (via manipulating the URL section of the 
+            browser) that does not exist, the request to the server is sent, so
+            it will not reach the 404 Route below.
+            
+            However, if navigating to an API route that actually exists
+            (ex: api/), the response from the server will be shown instead of
+            the React application since the server did not send the html.
+
+            */}
             <Route path='*' element={<Navigate to='/' />} />
           </Route>
         </Routes>
