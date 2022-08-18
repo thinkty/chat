@@ -1,6 +1,6 @@
 import React from 'react';
-import { Page } from '../App';
-import { SESSION_KEY_ID_TOKEN, SESSION_KEY_USER } from '../util';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from './AuthProvider';
 
 /**
  * Response from server after sending the JWT (idToken)
@@ -8,15 +8,16 @@ import { SESSION_KEY_ID_TOKEN, SESSION_KEY_USER } from '../util';
  * @see auth.ts src/server/auth.ts
  */
 type FirebaseAuthResponse = {
-  user: string,
+  name: string,
   idToken: string,
 };
 
 export const LoginPage = ({
-  setPage,
 } : {
-  setPage: React.Dispatch<React.SetStateAction<Page>>
 }): JSX.Element => {
+
+  const auth = React.useContext(AuthContext);
+  const navigate = useNavigate();
 
   // Send the Id Token to the server to authenticate with Firebase
   function handleCredentialResponse(response: google.accounts.id.CredentialResponse) {
@@ -34,11 +35,11 @@ export const LoginPage = ({
         throw new Error(response.statusText);
       })
       .then((data: FirebaseAuthResponse) => {
-        // Save to session-storage for accessing secured APIs
-        sessionStorage.setItem(SESSION_KEY_ID_TOKEN, data.idToken);
-        sessionStorage.setItem(SESSION_KEY_USER, data.user);
+        auth.login(data.idToken, data.name, () => {
 
-        setPage("main");
+          // Send user to main page after login complete
+          navigate('/', { replace: true });
+        });
       })
       .catch((error) => {
         // TODO: visual alert of error

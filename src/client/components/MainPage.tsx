@@ -1,25 +1,28 @@
 import React from 'react';
-import { Page } from '../App';
-import { logout, User } from '../util';
+import { Link } from 'react-router-dom';
+import { AuthContext } from './AuthProvider';
 
 export const MainPage = ({
-  setPage,
-  user,
 } : {
-  setPage: React.Dispatch<React.SetStateAction<Page>>,
-  user: User,
 }): JSX.Element => {
+  const auth = React.useContext(AuthContext);
+
+  if (!auth.user) {
+    return (
+      <Link to='login'>
+        Login
+      </Link>
+    );
+  }
 
   return (
     <>
-      <h1>
-        MainPage
-      </h1>
-      Hi, { user.user }
+      Hi, { auth.user.name }
       <button
         onClick={() => {
-          logout();
-          setPage('login');
+          auth.logout(() => {
+            // No op since it will automatically redirect to login page
+          });
         }}
       >
         Logout

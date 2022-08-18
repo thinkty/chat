@@ -29,7 +29,7 @@ authRouter.post('/auth', (req, res) => {
 
       // Send user info along with idToken (JWT)
       res.send({
-        user: response.user.displayName ? response.user.displayName : response.user.uid,
+        name: response.user.displayName ? response.user.displayName : response.user.uid,
         idToken,
       });
     })
