@@ -1,14 +1,15 @@
 import React from 'react';
-import { getUserFromSessionStorage, removeUserSession, saveUserSession, User } from '../util';
+import { getUserFromSessionStorage, Provider, removeUserSession, saveUserSession, User } from '../util';
 
 interface AuthContextType {
   user: User | null;
-  login: (idToken: string, name: string, cb: VoidFunction) => void;
+  login: (idToken: string, name: string, provider: Provider, cb: VoidFunction) => void;
   logout: (cb: VoidFunction) => void;
 };
 
 // @see https://stackoverflow.com/a/67957976
-export const AuthContext = React.createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = React.createContext<AuthContextType>({} as AuthContextType);
+export const useAuth = () => (React.useContext(AuthContext));
 
 /**
  * An authentication context provider for the React application
@@ -27,9 +28,9 @@ export const AuthProvider = ({
   const parsedUser = getUserFromSessionStorage();
   const [user, setUser] = React.useState<User | null>(parsedUser);
 
-  const login = (idToken: string, name: string, cb: VoidFunction) => {
-    saveUserSession({ idToken, name });
-    setUser({ idToken, name });
+  const login = (idToken: string, name: string, provider: Provider, cb: VoidFunction) => {
+    saveUserSession({ idToken, name, provider });
+    setUser({ idToken, name, provider });
     cb();
   }
 

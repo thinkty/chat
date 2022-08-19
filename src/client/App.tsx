@@ -55,9 +55,6 @@ const CommonLayout = (): JSX.Element => {
       style={{
         width: '100vw',
         height: '100vh',
-        display: 'grid',
-        justifyContent: 'center',
-        alignItems: 'start',
         backgroundColor: 'black',
         color: 'white',
         padding: 0,

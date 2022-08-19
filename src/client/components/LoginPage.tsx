@@ -1,28 +1,33 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from './AuthProvider';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
 
 /**
  * Response from server after sending the JWT (idToken)
  *
  * @see auth.ts src/server/auth.ts
  */
-type FirebaseAuthResponse = {
+ type FirebaseAuthResponse = {
   name: string,
+  uid: string,
   idToken: string,
 };
 
 export const LoginPage = ({
 } : {
 }): JSX.Element => {
-
-  const auth = React.useContext(AuthContext);
+  const auth = useAuth();
   const navigate = useNavigate();
 
-  // Send the Id Token to the server to authenticate with Firebase
-  function handleCredentialResponse(response: google.accounts.id.CredentialResponse) {
+  // Send back to main page if user is authenticated
+  if (auth.user) {
+    return <Navigate to='/' replace />;
+  }
 
-    fetch('/auth', {
+  // Send the Id Token to the server to authenticate with Firebase
+  function handleGoogleLogin(response: google.accounts.id.CredentialResponse) {
+
+    fetch('/auth-google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken: response.credential }),
@@ -35,14 +40,14 @@ export const LoginPage = ({
         throw new Error(response.statusText);
       })
       .then((data: FirebaseAuthResponse) => {
-        auth.login(data.idToken, data.name, () => {
+        auth.login(data.idToken, data.name, 'google', () => {
 
           // Send user to main page after login complete
           navigate('/', { replace: true });
         });
       })
       .catch((error) => {
-        // TODO: visual alert of error
+        alert('Failed to login. Check console for details');
 
         // 400 - bad request : Missing or malformed idToken
         // 40X - Invalid JWT (idToken) or something else idk...
@@ -50,104 +55,54 @@ export const LoginPage = ({
       });
   }
 
-  // Load sign-in-with-google script
-  const status = useScript('https://accounts.google.com/gsi/client');
-
-  if (status === "ready") {
+  React.useEffect(() => {
     google.accounts.id.initialize({
-      client_id: "950484081367-5u480vk65qg38kogmka1ptaqpacrhpnj.apps.googleusercontent.com",
-      callback: handleCredentialResponse
+      client_id: '950484081367-5u480vk65qg38kogmka1ptaqpacrhpnj.apps.googleusercontent.com',
+      auto_select: false,
+      context: 'signin',
+      callback: handleGoogleLogin,
     });
     google.accounts.id.renderButton(
-      document.getElementById("buttonDiv")!,
-      {theme: 'outline', size: 'large', type: 'standard'}  // customization attributes
+      document.getElementById('googleAuthButton')!,
+      {theme: 'filled_blue', size: 'medium', type: 'standard', width: '300px' }
     );
-  }
+  }, []);
 
   // TODO: update UI
   return (
     <>
-      <h1>
-        Chat
-      </h1>
-      LoginPage
-      <div id="buttonDiv"></div> 
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <h1>
+          Login
+        </h1>
+
+        <div
+          style={{
+            border: 'thin solid white',
+            borderRadius: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 10,
+            width: 300,
+          }}
+        >
+          <div
+            id='googleAuthButton'
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
     </>
   );
-}
-
-type ScriptStatus = "idle" | "loading" | "ready" | "error";
-
-/**
- * Function to asynchronously load/ scripts in React.
- * 
- * @param {string} src Url of the script to load
- * @returns {ScriptStatus} 
- * @see https://usehooks.com/useScript/
- */
-function useScript(src: string) {
-  // Keep track of script status ("idle", "loading", "ready", "error")
-  const [status, setStatus] = React.useState<ScriptStatus>("loading");
-
-  // Helper function to set string to ScriptStatus
-  function stos(value: string): ScriptStatus {
-    switch (value) {
-      case "idle":
-        return "idle";
-      case "ready":
-        return "ready";
-      case "error":
-        return "error";
-      default:
-        return "loading";
-    }
-  }
-
-  React.useEffect(() => {
-    // Fetch existing script element by src. It may have been added by another intance of this hook
-    let script: HTMLScriptElement | null = document.querySelector(`script[src="${src}"]`);
-
-    // Create script
-    if (script == null) {
-      script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.setAttribute("data-status", "loading");
-
-      // Add script to document body
-      document.body.appendChild(script);
-
-      // Store status in attribute on script. This can be read by other instances of this hook
-      const setAttributeFromEvent = (event: Event) => {
-        script!.setAttribute("data-status", event.type === "load" ? "ready" : "error");
-      };
-
-      script.addEventListener("load", setAttributeFromEvent);
-      script.addEventListener("error", setAttributeFromEvent);
-    } else {
-
-      // Grab existing script status from attribute and set to state.
-      setStatus(stos(script.getAttribute("data-status")!));
-    }
-
-    // Script event handler to update status in state
-    // Note: Even if the script already exists we still need to add event handlers to update the state for *this* hook instance.
-    const setStateFromEvent = (event: Event) => {
-      setStatus(event.type === "load" ? "ready" : "error");
-    };
-
-    script.addEventListener("load", setStateFromEvent);
-    script.addEventListener("error", setStateFromEvent);
-
-    // Remove event listeners on cleanup
-    return () => {
-      if (script) {
-        script.removeEventListener("load", setStateFromEvent);
-        script.removeEventListener("error", setStateFromEvent);
-      }
-    }},
-    [src] // Only re-run effect if script src changes
-  );
-
-  return status;
 }

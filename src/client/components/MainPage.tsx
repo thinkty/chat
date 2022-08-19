@@ -1,18 +1,14 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { AuthContext } from './AuthProvider';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
 
 export const MainPage = ({
 } : {
 }): JSX.Element => {
-  const auth = React.useContext(AuthContext);
+  const auth = useAuth();
 
   if (!auth.user) {
-    return (
-      <Link to='login'>
-        Login
-      </Link>
-    );
+    return <Navigate to='/login' replace />;
   }
 
   // TODO: update UI
