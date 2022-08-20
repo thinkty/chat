@@ -1,9 +1,10 @@
 import React from 'react';
-import { getUserFromSessionStorage, Provider, removeUserSession, saveUserSession, User } from '../util';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getUserFromSessionStorage, removeUserSession, saveUserSession, User } from '../util';
 
 interface AuthContextType {
   user: User | null;
-  login: (idToken: string, name: string, uid: string, provider: Provider, cb: VoidFunction) => void;
+  login: (idToken: string, name: string, uid: string, cb: VoidFunction) => void;
   logout: (cb: VoidFunction) => void;
 };
 
@@ -28,14 +29,16 @@ export const AuthProvider = ({
   const parsedUser = getUserFromSessionStorage();
   const [user, setUser] = React.useState<User | null>(parsedUser);
 
-  const login = (idToken: string, name: string, uid: string, provider: Provider, cb: VoidFunction) => {
-    saveUserSession({ idToken, name, uid, provider });
-    setUser({ idToken, name, uid, provider });
+  const login = (idToken: string, name: string, uid: string, cb: VoidFunction) => {
+    saveUserSession({ idToken, name, uid });
+    signInWithCustomToken(getAuth(), idToken);
+    setUser({ idToken, name, uid });
     cb();
   }
 
   const logout = (cb: VoidFunction) => {
     removeUserSession();
+    getAuth().signOut();
     setUser(null);
     cb();
   }
