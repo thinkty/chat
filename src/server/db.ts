@@ -1,32 +1,27 @@
-import { getDatabase, ref, get, child, set } from "firebase/database";
+import { database, auth } from "firebase-admin";
 
 // Don't plan on individual messages lookup
-type Message = {
+type DBMessage = {
   sender: string;           // Sender uid
   content: string;          // Message content
 };
 
 // Lookup by uuid allocated during initialization
-type ConversationRecord = {
+type DBConversationRecord = {
   members: string[];        // List of uid
-  messages: Message[];      // List of messages sent by users
+  messages: DBMessage[];      // List of messages sent by users
 };
 
-type UserRecordConversation = {
+type DBUserRecordConversation = {
   uuid: string;                 // Uuid of the conversation record
   memberNames: string[];        // Display name of the members
 };
 
 // Lookup by uid
-type UserRecord = {
+type DBUserRecord = {
   name: string;                             // Display name of the user
-  conversations: UserRecordConversation[];  // List of conversation uuids the user is in
+  conversations: DBUserRecordConversation[];  // List of conversation uuids the user is in
 };
-
-// type NameRecord = {
-//   name: string;     // Display name of the user
-//   uid: string;      // Uid of the user
-// };
 
 /**
  * Retrieve user information from the Firebase realtime database. If the user
@@ -36,34 +31,41 @@ type UserRecord = {
  * @param {string} name Name of the user used for creating new user if none
  */
 export async function getUser(uid: string, name: string) {
-
-  const dbRef = ref(getDatabase());
-
-  const snapshot = await get(child(dbRef, 'users/' + uid));
+  const db = database();
+  const snapshot = await db.ref('users/' + uid).get();
 
   // Create user if it does not exist
   if (!snapshot.exists()) {
 
-    const db = getDatabase();
-    set(ref(db, 'users/' + uid), { name, conversations: [] });
-    set(ref(db, 'names/' + uid), { name, uid });
+    db.ref('users/' + uid).set({ name, conversations: [] });
     return { name, conversations: [] };
   }
 
-  return snapshot.val() as UserRecord;
+  return snapshot.val() as DBUserRecord;
 }
 
 /**
- * Retrieve all users from the database. This method is used for letting the
- * user search for others.
+ * Retrieve all users from Firebase. This method is used for letting the user
+ * search for others.
+ * 
+ * Instead of listUsers, this method is used to bypass the 1000 entry limit
+ * 
+ * @see https://firebase.google.com/docs/auth/admin/manage-users#bulk_retrieve_user_data
+ * @see https://firebase.google.com/docs/auth/admin/manage-users#list_all_users
  */
 export async function getAllUsers() {
 
-  const dbRef = ref(getDatabase());
+  const { users } = await auth().getUsers([]);
 
-  const snapshot = await get(child(dbRef, 'names'));
-
-  return snapshot.val();
+  // Only get the necessary information
+  const filteredUsers = users.map((user) => (
+    {
+      uid: user.uid,
+      name: user.displayName || 'Anonymous',
+    }
+  ));
+  
+  return filteredUsers;
 }
 
 /**
@@ -73,13 +75,12 @@ export async function getAllUsers() {
  */
 export async function getConversation(uuid: string) {
 
-  const dbRef = ref(getDatabase());
-
-  const snapshot = await get(child(dbRef, 'conversations/' + uuid));
+  const db = database();
+  const snapshot = await db.ref('conversations/' + uuid).get();
 
   if (!snapshot.exists()) {
     throw new Error(`Conversation with uuid - ${uuid} does not exist`);
   }
 
-  return snapshot.val() as ConversationRecord;
+  return snapshot.val() as DBConversationRecord;
 }

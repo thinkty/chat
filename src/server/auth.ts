@@ -1,60 +1,54 @@
+import { randomUUID } from 'crypto';
 import { Router } from 'express';
-import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
-import { getUser } from './db';
+import { auth } from 'firebase-admin';
 
 export const authRouter = Router();
 
 /**
- * Extract IdToken (obtained from the client-side with SignIn With Google) from the request and authenticate with Firebase
- * 
- * @see https://firebase.google.com/docs/auth/web/google-signin#expandable-2
- * @see https://firebase.google.com/docs/auth/web/google-signin#expandable-3
+ * Generate token for the given uid
  */
-authRouter.post('/auth-google', (req, res) => {
+authRouter.post('/token', async (req, res) => {
 
-  // Missing/malformed idToken
-  const idToken = req.body.idToken;
-  if (typeof req.body.idToken === 'undefined' || idToken == null || idToken == '') {
-    res.status(400); // Bad request
-    res.send('Missing/malformed idToken');
+  // Missing/malformed request body
+  const { uid } = req.body;
+  if (!uid) {
+    res.status(400).send('Missing/malformed uid');
     return;
   }
 
-  // Build Firebase credential with the Google ID token.
-  const credential = GoogleAuthProvider.credential(idToken);
-
-  // Sign in with credential from the Google user.
-  const auth = getAuth();
-  signInWithCredential(auth, credential)
-    .then(async (response) => {
-      
-      const name = response.user.displayName == null ? 'Anonymous' : response.user.displayName;
-      const uid = response.user.uid;
-
-      // Creact user in database if necessary and fetch conversation info
-      const userRecord = await getUser(uid, name);
-
-      // Send user info along with idToken (JWT)
-      res.send({
-        name,
-        uid,
-        idToken,
-        userRecord,
-      });
+  auth()
+    .createCustomToken(uid)
+    .then(() => {
+      res.sendStatus(200);
     })
     .catch((error) => {
+      res.status(500).send(error);
+    });
+});
 
-      console.error(error);
+/**
+ * Check if a user exists with the given email and if the user does not exist,
+ * create new user with given email and password.
+ */
+authRouter.post('/email', (req, res) => {
 
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      // The email of the user's account used.
-      // const email = error.customData.email;
-      // The AuthCredential type that was used.
-      // const credential = GoogleAuthProvider.credentialFromError(error);
-      // ...
+  // Missing/malformed request body
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).send('Missing/malformed request');
+    return;
+  }
 
-      res.status(errorCode) // TODO: maybe 403 FORBIDDEN : invalid jwt (idToken). Check by manipulating the jwt
-      res.send(errorMessage);
+  auth()
+    .getUserByEmail(email)
+    .then(() => { res.sendStatus(200); })
+    .catch(() => {
+      auth().createUser({
+        email,
+        password,
+        displayName: randomUUID(),
+      })
+      .then(() => { res.sendStatus(200); })
+      .catch((error) => { res.status(500).send(error); })
     });
 });

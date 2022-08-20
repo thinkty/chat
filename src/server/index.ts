@@ -1,21 +1,25 @@
 import express from 'express';
-import { FirebaseOptions, initializeApp } from 'firebase/app';
 import * as helmet from 'helmet';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { authRouter } from './auth';
+import { apiRouter } from './api';
+import { AppOptions, cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
+import { auth } from 'firebase-admin';
 
 dotenv.config();
 
-const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+const serviceAccount: ServiceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY,
+}
+
+const firebaseAdminConfig: AppOptions = {
+  credential: cert(serviceAccount),
   databaseURL: `https://${process.env.FIREBASE_DB_NAME}.firebaseio.com`,
 };
-initializeApp(firebaseConfig);
+
+initializeApp(firebaseAdminConfig);
 
 const app = express();
 
@@ -24,7 +28,12 @@ const app = express();
 app.use(helmet.contentSecurityPolicy({
   directives: {
     scriptSrc: [`'self'`, `'unsafe-inline'`, 'https://accounts.google.com/gsi/client'],
-    connectSrc: [`'self'`, 'https://accounts.google.com/gsi/'],
+    connectSrc: [
+      `'self'`,
+      'https://accounts.google.com/gsi/',
+      'https://identitytoolkit.googleapis.com/v1/',
+      'https://securetoken.googleapis.com/v1/token'
+    ],
     frameSrc: [`'self'`, 'https://accounts.google.com/gsi/'],
     styleSrc: [`'self'`, `'unsafe-inline'`, 'https://accounts.google.com/gsi/style'],
     imgSrc: [`'self'`]
@@ -35,13 +44,27 @@ app.use(helmet.contentSecurityPolicy({
 app.use(helmet.crossOriginOpenerPolicy({ policy: 'same-origin-allow-popups' })); // For google sign in popups
 app.use(express.json());
 app.use(express.urlencoded( {extended : false } ));
-app.use(authRouter);
 app.use(express.static('public'));
 
-// TODO: check jwt before doing any operation
-app.get('/api', (_, res) => {
-  res.send('hello world');
+app.use('/auth', authRouter);
+
+// Middleware for authenticating user before accessing APIs
+app.use('/api', (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+    const token = req.headers.authorization.split(' ')[1];
+    auth()
+      .verifyIdToken(token)
+      .then(() => {
+        next();
+      })
+      .catch((error) => {
+        res.status(401).send(error);
+      })
+  } else {
+    res.status(401).send('Token missing');
+  }
 });
+app.use('/api', apiRouter);
 
 app.listen(process.env.PORT, () => {
   console.log(`Application started on port ${process.env.PORT}`);
