@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { getUser } from './db';
 
 export const authRouter = Router();
 
@@ -9,7 +10,7 @@ export const authRouter = Router();
  * @see https://firebase.google.com/docs/auth/web/google-signin#expandable-2
  * @see https://firebase.google.com/docs/auth/web/google-signin#expandable-3
  */
-authRouter.post('/auth', (req, res) => {
+authRouter.post('/auth-google', (req, res) => {
 
   // Missing/malformed idToken
   const idToken = req.body.idToken;
@@ -25,17 +26,26 @@ authRouter.post('/auth', (req, res) => {
   // Sign in with credential from the Google user.
   const auth = getAuth();
   signInWithCredential(auth, credential)
-    .then((response) => {
+    .then(async (response) => {
+      
+      const name = response.user.displayName == null ? 'Anonymous' : response.user.displayName;
+      const uid = response.user.uid;
+
+      // Creact user in database if necessary and fetch conversation info
+      const userRecord = await getUser(uid, name);
 
       // Send user info along with idToken (JWT)
       res.send({
-        name: response.user.displayName ? response.user.displayName : response.user.uid,
+        name,
+        uid,
         idToken,
+        userRecord,
       });
     })
     .catch((error) => {
 
-      // Handle Errors here.
+      console.error(error);
+
       const errorCode = error.code;
       const errorMessage = error.message;
       // The email of the user's account used.
