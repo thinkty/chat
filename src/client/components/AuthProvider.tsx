@@ -3,7 +3,7 @@ import { getUserFromSessionStorage, Provider, removeUserSession, saveUserSession
 
 interface AuthContextType {
   user: User | null;
-  login: (idToken: string, name: string, provider: Provider, cb: VoidFunction) => void;
+  login: (idToken: string, name: string, uid: string, provider: Provider, cb: VoidFunction) => void;
   logout: (cb: VoidFunction) => void;
 };
 
@@ -28,9 +28,9 @@ export const AuthProvider = ({
   const parsedUser = getUserFromSessionStorage();
   const [user, setUser] = React.useState<User | null>(parsedUser);
 
-  const login = (idToken: string, name: string, provider: Provider, cb: VoidFunction) => {
-    saveUserSession({ idToken, name, provider });
-    setUser({ idToken, name, provider });
+  const login = (idToken: string, name: string, uid: string, provider: Provider, cb: VoidFunction) => {
+    saveUserSession({ idToken, name, uid, provider });
+    setUser({ idToken, name, uid, provider });
     cb();
   }
 

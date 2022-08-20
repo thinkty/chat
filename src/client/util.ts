@@ -12,6 +12,11 @@ export const SESSION_KEY_ID_TOKEN = 'jwt';
 export const SESSION_KEY_NAME = 'name';
 
 /**
+ * Used for identifying user in the Firebase project
+ */
+export const SESSION_KEY_UID = 'uid';
+
+/**
  * Provider of the JWT
  */
 export const SESSION_PROVIDER = 'provider';
@@ -32,6 +37,11 @@ export type User = {
    * `null` if it is not in session storage.
    */
   name: string,
+
+  /**
+   * Used for identifying user in the Firebase project
+   */
+  uid: string,
 
   /**
    * The provider of the JWT
@@ -59,9 +69,10 @@ export function getUserFromSessionStorage(): User | null {
 
   const idToken = sessionStorage.getItem(SESSION_KEY_ID_TOKEN);
   const name = sessionStorage.getItem(SESSION_KEY_NAME);
+  const uid = sessionStorage.getItem(SESSION_KEY_UID);
   const provider = sessionStorage.getItem(SESSION_PROVIDER);
 
-  if (idToken == null || name == null) {
+  if (idToken == null || name == null || uid == null) {
     return null;
   }
 
@@ -74,6 +85,7 @@ export function getUserFromSessionStorage(): User | null {
   return {
     idToken,
     name,
+    uid,
     provider: provider as Provider,
   };
 }
@@ -85,6 +97,7 @@ export function getUserFromSessionStorage(): User | null {
 export function saveUserSession(user: User) {
   sessionStorage.setItem(SESSION_KEY_ID_TOKEN, user.idToken);
   sessionStorage.setItem(SESSION_KEY_NAME, user.name);
+  sessionStorage.setItem(SESSION_KEY_UID, user.uid);
   sessionStorage.setItem(SESSION_PROVIDER, user.provider);
 }
 
@@ -92,19 +105,9 @@ export function saveUserSession(user: User) {
  * Remove user information from the session storage
  */
 export function removeUserSession() {
-  const user = getUserFromSessionStorage();
-
-  if (!user) {
-    return;
-  }
-
-  if (user.provider == 'google') {
-    // I don't really understand what this is doing
-    google.accounts.id.disableAutoSelect();
-  }
-
   sessionStorage.removeItem(SESSION_KEY_ID_TOKEN);
   sessionStorage.removeItem(SESSION_KEY_NAME);
+  sessionStorage.removeItem(SESSION_KEY_UID);
   sessionStorage.removeItem(SESSION_PROVIDER);
 
   // TODO: in case of having multiple tabs open with the same account logged-in, when logging out, also log out from those tabs

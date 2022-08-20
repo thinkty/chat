@@ -40,7 +40,7 @@ export const LoginPage = ({
         throw new Error(response.statusText);
       })
       .then((data: FirebaseAuthResponse) => {
-        auth.login(data.idToken, data.name, 'google', () => {
+        auth.login(data.idToken, data.name, data.uid, 'google', () => {
 
           // Send user to main page after login complete
           navigate('/', { replace: true });
