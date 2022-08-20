@@ -4,7 +4,6 @@ import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-d
 import { authRouter } from './auth';
 import { apiRouter } from './api';
 import { AppOptions, cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
-import { auth } from 'firebase-admin';
 
 dotenv.config();
 
@@ -47,23 +46,6 @@ app.use(express.urlencoded( {extended : false } ));
 app.use(express.static('public'));
 
 app.use('/auth', authRouter);
-
-// Middleware for authenticating user before accessing APIs
-app.use('/api', (req, res, next) => {
-  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
-    const token = req.headers.authorization.split(' ')[1];
-    auth()
-      .verifyIdToken(token)
-      .then(() => {
-        next();
-      })
-      .catch((error) => {
-        res.status(401).send(error);
-      })
-  } else {
-    res.status(401).send('Token missing');
-  }
-});
 app.use('/api', apiRouter);
 
 app.listen(process.env.PORT, () => {
