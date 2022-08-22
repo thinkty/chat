@@ -15,12 +15,6 @@ export const SESSION_KEY_NAME = 'name';
 export const SESSION_KEY_UID = 'uid';
 
 /**
- * Provider of the JWT
- */
-export const SESSION_PROVIDER = 'provider';
-export type Provider = 'google';
-
-/**
  * Contains information related to the current session's user
  */
 export type User = {
@@ -40,11 +34,6 @@ export type User = {
    * Used for identifying user in the Firebase project
    */
   uid: string,
-
-  /**
-   * The provider of the JWT
-   */
-  provider: Provider,
 };
 
 /**
@@ -68,7 +57,6 @@ export function getUserFromSessionStorage(): User | null {
   const idToken = sessionStorage.getItem(SESSION_KEY_ID_TOKEN);
   const name = sessionStorage.getItem(SESSION_KEY_NAME);
   const uid = sessionStorage.getItem(SESSION_KEY_UID);
-  const provider = sessionStorage.getItem(SESSION_PROVIDER);
 
   if (idToken == null || name == null || uid == null) {
     return null;
@@ -84,7 +72,6 @@ export function getUserFromSessionStorage(): User | null {
     idToken,
     name,
     uid,
-    provider: provider as Provider,
   };
 }
 
@@ -96,7 +83,6 @@ export function saveUserSession(user: User) {
   sessionStorage.setItem(SESSION_KEY_ID_TOKEN, user.idToken);
   sessionStorage.setItem(SESSION_KEY_NAME, user.name);
   sessionStorage.setItem(SESSION_KEY_UID, user.uid);
-  sessionStorage.setItem(SESSION_PROVIDER, user.provider);
 }
 
 /**
@@ -106,5 +92,4 @@ export function removeUserSession() {
   sessionStorage.removeItem(SESSION_KEY_ID_TOKEN);
   sessionStorage.removeItem(SESSION_KEY_NAME);
   sessionStorage.removeItem(SESSION_KEY_UID);
-  sessionStorage.removeItem(SESSION_PROVIDER);
 }
