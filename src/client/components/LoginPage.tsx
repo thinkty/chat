@@ -1,4 +1,4 @@
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import React, { FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
@@ -16,6 +16,18 @@ export const LoginPage = ({
     return <Navigate to='/' replace />;
   }
 
+  // Google sign-in setup
+  // @see https://firebase.google.com/docs/auth/web/google-signin
+  const firebaseAuth = getAuth();
+  firebaseAuth.useDeviceLanguage();
+  const googleAuthProvider = new GoogleAuthProvider();
+
+  async function handleGoogleSignIn() {
+    signInWithPopup(firebaseAuth, googleAuthProvider);
+  }
+
+  // Email & Password sign-in setup
+  // TODO: Maybe separate this part into another React component?
   const [email, setEmail] = React.useState<string>('');
   const [password, setPassword] = React.useState<string>('');
 
@@ -23,6 +35,7 @@ export const LoginPage = ({
     e.preventDefault();
 
     if (email == '' || password == '') {
+      alert.alert('Empty email or password', 'error', 3000);
       return;
     }
 
@@ -35,10 +48,15 @@ export const LoginPage = ({
       });
 
       // At this point, the user definitely exists, but the password could be wrong
-      const { user } = await signInWithEmailAndPassword(getAuth(), email, password);
+      const { user } = await signInWithEmailAndPassword(firebaseAuth, email, password);
 
       // Fetch JWT
-      const idToken = await user.getIdToken(false);
+      if (firebaseAuth.currentUser == null) {
+        alert.alert('Failed to authenticate current user', 'error', 5000);
+        return;
+      }
+
+      const idToken = await firebaseAuth.currentUser.getIdToken(true);
 
       auth.login(idToken, user.displayName || 'Anonymous', user.uid, () => {
         setEmail('');
